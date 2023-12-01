@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="Function.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="box-area">
+        <header>
+            <div class="wrapper">
+                <div class="logo">
+                    <a href="#">Hệ QTCSDL</a>
+                </div>
+                <nav>
+                    <a href="index.html">Table</a> <a href="View.html">View</a> <a href="Procedure.html">Procedure</a>
+                    <a href="Function.html">Function</a> <a href="Trigger.html">Trigger</a><a href="User.html">User</a>
+                </nav>
+            </div>
+        </header>
+        <div class="banner-area">
+            <h2 style="font-style: bold;color: black;">Nhóm 7</h2>
+        </div>
+        <div class="content-area">
+            <div class="wrapper">
+                <h2>CREATE FUNCTION</h2>
+                <div class="table-horizontal-container">
+                    <table>
+                        <tr>
+                            <th>Create Querry</th>
+                            <th>Detail</th>
+                        </tr>
+                        <tr>
+                            <td>Câu 1. Lấy danh sách khách hàng và số lượng hóa đơn đã mua trong năm nay:
+
+                            </td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetCustomerInvoiceCountThisYear()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT KhachHang.MaKH, TenKH, COUNT(HoaDon.MaHD) AS SoLuongHoaDon
+FROM KhachHang
+LEFT JOIN HoaDon ON KhachHang.MaKH = HoaDon.MaKH AND YEAR(NgayLapHD) = YEAR(GETDATE())
+GROUP BY KhachHang.MaKH, TenKH
+);
+GO
+SELECT * FROM dbo.GetCustomerInvoiceCountThisYear();
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 2. Lấy danh sách đơn đặt hàng đã được thanh toán và chưa được thanh toán
+                            </td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetPaidAndUnpaidOrders()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT MaDDH, HinhThucTT, CASE WHEN MaHD IS NOT NULL THEN 'Đã thanh toán' ELSE 'Chưa thanh toán' END AS TinhTrang
+FROM DonDatHang
+LEFT JOIN HoaDon ON DonDatHang.MaDDH = HoaDon.MaHD
+);
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 3. Lấy tổng doanh thu từ bán hàng của mỗi khách hàng</td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetTotalRevenueByCustomer()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT KhachHang.MaKH, TenKH, SUM(GiaBan * SoLuongMua) AS DoanhThu
+FROM KhachHang
+JOIN HoaDon ON KhachHang.MaKH = HoaDon.MaKH
+JOIN CT_HoaDon ON HoaDon.MaHD = CT_HoaDon.MaHD
+JOIN SanPham ON CT_HoaDon.MaSP = SanPham.MaSP
+GROUP BY KhachHang.MaKH, TenKH
+);
+GO
+SELECT * FROM dbo.GetTotalRevenueByCustomer();
+                            </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 4. Lấy danh sách sản phẩm của một nhà cung cấp cụ thể
+                            </td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetProductsBySupplier(@MaNCC nvarchar(30))
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT SanPham.MaSP, TenSP, DonViTinh, GiaBan
+FROM SanPham
+JOIN CT_SanPham ON SanPham.MaSP = CT_SanPham.MaSP
+WHERE CT_SanPham.MaNCC = @MaNCC
+);
+GO
+SELECT * FROM dbo.GetProductsBySupplier('NCC001');
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 5. Lấy tổng số lượng sản phẩm đã bán theo từng tháng:
+
+                            </td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetTotalSoldProductsByMonth()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT MONTH(NgayLapHD) AS Thang, SUM(SoLuongMua) AS TongSoLuongBan
+FROM HoaDon
+JOIN CT_HoaDon ON HoaDon.MaHD = CT_HoaDon.MaHD
+GROUP BY MONTH(NgayLapHD)
+);
+GO
+SELECT * FROM dbo.GetTotalSoldProductsByMonth();
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 6 : danh sách khách hàng có số lượng đơn hàng nhiều nhất
+                            </td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetCustomersWithMostOrders()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT TOP 1 KH.*
+FROM KhachHang KH
+JOIN HoaDon HD ON KH.MaKH = HD.MaKH
+GROUP BY KH.MaKH, KH.TenKH, KH.DiaChi, KH.SoDT, KH.NgaySinh
+ORDER BY COUNT(HD.MaHD) DESC
+);
+GO
+-- Sử dụng hàm
+SELECT * FROM dbo.GetCustomersWithMostOrders();
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 7: Tổng giá trị các đơn hàng của một nhà cung cấp</td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetTotalOrderValueBySupplier(@SupplierID NVARCHAR(30))
+RETURNS MONEY
+AS
+BEGIN
+DECLARE @TotalOrderValue MONEY;
+SELECT @TotalOrderValue = SUM(CTHD.SoLuongMua * CTHD.DonGiaBan)
+FROM HoaDon HD
+JOIN CT_HoaDon CTHD ON HD.MaHD = CTHD.MaHD
+JOIN CT_SanPham CTSP ON CTHD.MaSP = CTSP.MaSP
+WHERE CTSP.MaNCC = @SupplierID;
+RETURN @TotalOrderValue;
+END;
+GO
+-- Sử dụng hàm
+DECLARE @SupplierID NVARCHAR(30) = 'NCC001';
+SELECT dbo.GetTotalOrderValueBySupplier(@SupplierID) AS TotalOrderValue;
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 8 .Danh sách sản phẩm có giá bán cao nhất</td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetProductsHighestPrice()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT TOP 1 *
+FROM SanPham
+ORDER BY GiaBan DESC
+);
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 9. Tổng số tiền phải trả của một khách hàng</td>
+                            <td>
+                                <pre>
+GO
+CREATE FUNCTION dbo.GetTotalAmountToPayByCustomer(@CustomerID NVARCHAR(20))
+RETURNS MONEY
+AS
+BEGIN
+DECLARE @TotalAmount MONEY;
+SELECT @TotalAmount = SUM(PTN.SoTienTra)
+FROM PhieuTraNo PTN
+JOIN HoaDon HD ON PTN.MaHD = HD.MaHD
+WHERE HD.MaKH = @CustomerID;
+RETURN @TotalAmount;
+END;
+GO
+-- Sử dụng hàm
+DECLARE @CustomerID NVARCHAR(20) = 'KH001';
+SELECT dbo.GetTotalAmountToPayByCustomer(@CustomerID) AS TotalAmountToPay;
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 10: Danh sách sản phẩm được đặt hàng nhiều nhất</td>
+                            <td>
+                                <pre>
+    GO
+CREATE FUNCTION dbo.GetMostOrderedProducts()
+RETURNS TABLE
+AS
+RETURN
+(
+SELECT TOP 1 SP.*, SUM(CTDDH.SLDat) AS TotalQuantityOrdered
+FROM SanPham SP
+JOIN CT_DDH CTDDH ON SP.MaSP = CTDDH.MaSP
+GROUP BY SP.MaSP, SP.TenSP, SP.DonViTinh, SP.GiaBan
+ORDER BY TotalQuantityOrdered DESC
+);
+GO
+-- Sử dụng hàm
+SELECT * FROM dbo.GetMostOrderedProducts();
+                                </pre>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>

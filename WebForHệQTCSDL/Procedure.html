@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="Procedure.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="box-area">
+        <header>
+            <div class="wrapper">
+                <div class="logo">
+                    <a href="#">Hệ QTCSDL</a>
+                </div>
+                <nav>
+                    <a href="index.html">Table</a> <a href="View.html">View</a> <a href="Procedure.html">Procedure</a>
+                    <a href="Function.html">Function</a> <a href="Trigger.html">Trigger</a><a href="User.html">User</a>
+                </nav>
+            </div>
+        </header>
+        <div class="banner-area">
+            <h2 style="font-style: bold;color: black;">Nhóm 7</h2>
+        </div>
+        <div class="content-area">
+            <div class="wrapper">
+                <h2>CREATE PROCEDURE</h2>
+                <div class="table-horizontal-container">
+                    <table>
+                        <tr>
+                            <th>Create Querry</th>
+                            <th>Detail</th>
+                        </tr>
+                        <tr>
+                            <td>Câu 1. Danh sách sản phẩm bán được trong tháng bất kì của năm bất kì, với tháng và năm
+                                là
+                                tham số đầu vào</td>
+                            <td>
+                                <pre>
+go
+create proc proc_dsSanPham(@thang int,@nam int)
+as
+begin
+select  *
+from SanPham
+where MaSP in(select c.MaSP
+from CT_HoaDon c , HoaDon h
+where c.MaHD=h.MaHD and MONTH(h.NgayLapHD)=@thang and YEAR(h.NgayLapHD)=@nam)
+end
+go
+exec proc_dsSanPham 11,2023
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 2. Viết một stored procedure để truy vấn và hiển thị danh sách các sản phẩm không
+                                bán
+                                được trong tháng, với tháng là tham số đầu vào</td>
+                            <td>
+                                <pre>
+go
+create proc proc_dsSanPhamTonKho(@thang int)
+as
+begin
+select  *
+from SanPham
+where MaSP not in(select c.MaSP
+from CT_HoaDon c , HoaDon h
+where c.MaHD=h.MaHD and MONTH(h.NgayLapHD)=@thang)
+end
+go
+exec proc_dsSanPhamTonKho 11
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 3. Proc để cập nhật giá bán của tất cả sản phẩm theo một tỷ lệ tăng:</td>
+                            <td>
+                                <pre>
+go
+create proc proc_UpdateGia(@tyle DECIMAL(5,2))
+as
+begin
+Update SanPham
+SET GiaBan = GiaBan * (1 + @tyle / 100);
+PRINT 'Giá bán của tất cả sản phẩm đã được cập nhật thành công.';
+end
+go
+exec proc_UpdateGia 5
+go
+print 'giá sau khi tăng'
+select GiaBan
+from SanPham
+                            </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 4. Danh sách các đơn đặt hàng được thanh toán qua hình thức chuyển khoản với hình
+                                thức thanh toán n:</td>
+                            <td>
+                                <pre>
+go
+create proc proc_dsDDHVoiHTTT(@n int)
+as
+begin
+select *
+from DonDatHang
+where   HinhThucTT=@n
+end
+go
+exec proc_dsDDHVoiHTTT 2
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 5. Cho biết danh sách các hóa đơn gồm MaHD, NgaylapHD, MaKH, TenKH và tổng trị giá
+                                của từng
+                                HoaDon. Danh sách sắp xếp tăng dần theo ngày và giảm dần theo tổng trị giá của hóa đơn.
+                            </td>
+                            <td>
+                                <pre>
+go
+create proc proc_dsHoaDonvaTongGia
+as
+begin
+select h.MaHD, h.NgayLapHD, k.MaKH, k.TenKH, SUM(c.SoLuongMua*sp.GiaBan) TongGia
+from HoaDon h, KhachHang k, SanPham sp, CT_HoaDon c
+where  h.MaKH=k.MaKH and c.MaSP=sp.MaSP and c.MaHD=h.MaHD
+group by   h.MaHD, h.NgayLapHD, k.MaKH, k.TenKH
+order by   h.NgayLapHD,TongGia desc
+end
+go
+exec proc_dsHoaDonvaTongGia
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 6 : tao sp_ncc cho biet thong tin ve nha cung cap voi ma nha cung cap la tham so dau
+                                vao</td>
+                            <td>
+                                <pre>
+GO
+CREATE PROC sp_ncc @ma_ncc nvarchar(30)
+AS SELECT *
+FROM NhaCungCap
+WHERE NhaCungCap.MaNCC=@ma_ncc
+GO
+EXEC sp_ncc 'NCC001'
+go
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 7: Tao sp_SanPham cho biet nhung san pham da ban duoc</td>
+                            <td>
+                                <pre>
+GO
+CREATE PROC sp_SanPham
+AS SELECT *
+FROM SanPham
+WHERE SanPham.MaSP IN(SELECT CT_HoaDon.MaSP
+                        FROM CT_HoaDon);
+GO
+
+EXEC sp_SanPham
+go
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 8 : tao thu tuc sp_doanhThu cua nam voi nam la tham so dau vao va tong doanh thu la
+                                tham so dau ra</td>
+                            <td>
+                                <pre>
+GO
+CREATE PROC sp_doanhThu @nam INT, @Tong INT OUT
+AS SELECT @Tong = SUM(SoLuongMua*DonGiaBan)
+FROM CT_HoaDon JOIN HoaDon ON CT_HoaDon.MaHD = HoaDon.MaHD
+WHERE YEAR(HoaDon.NgayLapHD)=@nam
+GO
+DECLARE @tong int, @nam int = 2023;
+EXEC sp_doanhThu @nam, @tong OUT
+PRINT N'Tổng doanh thu nam' + STR(@nam)+  ' là: ' + STR(@tong)
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 9 : Tao thu tuc sp_danhSach liet ke n loai san pham ban chay nhat trong thang voi n
+                                va thang la tham so dau vao</td>
+                            <td>
+                                <pre>
+GO
+CREATE PROC sp_danhSach @n int, @month int
+AS SELECT TOP(@n) a.MaSP, a.TenSP, SUM(SoLuongMua*DonGiaBan)as tongDoanhThu
+FROM SanPham a JOIN CT_HoaDon b on a.MaSP = b.MaSP
+JOIN HoaDon c on b.MaHD = c.MaHD
+WHERE MONTH(c.NgayLapHD)=@month
+GROUP BY a.MaSP, a.TenSP
+ORDER BY tongDoanhThu
+go
+EXEC sp_danhSach 2, 11
+go
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 10. tao thu tuc sp_sp dua ra tat ca san pham va loai san pham tuong ung</td>
+                            <td>
+                                <pre>
+GO
+CREATE PROC sp_sp
+AS SELECT *
+FROM SanPham
+GO
+EXEC sp_sp
+go
+                                </pre>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="View.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="box-area">
+        <header>
+            <div class="wrapper">
+                <div class="logo">
+                    <a href="#">Hệ QTCSDL</a>
+                </div>
+                <nav>
+                    <a href="index.html">Table</a> <a href="View.html">View</a> <a href="Procedure.html">Procedure</a>
+                    <a href="Function.html">Function</a> <a href="Trigger.html">Trigger</a><a href="User.html">User</a>
+                </nav>
+            </div>
+        </header>
+        <div class="banner-area">
+            <h2 style="font-style: bold;color: black;">Nhóm 7</h2>
+        </div>
+        <div class="content-area">
+            <div class="wrapper">
+                <h2>CREATE VIEW</h2>
+                <div class="table-horizontal-container">
+                    <table>
+                        <tr>
+                            <th>Create Querry</th>
+                            <th>Detail</th>
+                        </tr>
+                        <tr>
+                            <td>Câu 1 : Sp nhỏ hơn 20tr</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_SpNhoHon20tr
+AS SELECT MaSP , TenSP , GiaBan
+FROM SanPham
+WHERE GiaBan <20000000 ;
+
+GO
+SELECT *
+FROM v_SpNhoHon20tr
+ORDER BY MaSP DESC;
+Go
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 2 : Sp là laptop</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_SpLaLaptop
+AS SELECT MaSP , TenSP , GiaBan
+FROM SanPham ;
+GO
+SELECT *
+FROM v_SpLaLaptop
+WHERE TenSP LIKE 'Laptop%'
+ORDER BY MaSP DESC;
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 3 : những khách hàng sinh dưới năm 1995</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_KhDuoiNam1995
+AS SELECT MaKH , TenKH , NgaySinh
+FROM KhachHang
+WHERE YEAR(NgaySinh)<=1995;
+Go
+SELECT *
+FROM v_KhDuoiNam1995;
+GO
+                            </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 4 : những hóa đơn trước tháng 6</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_HDtrcThang6
+AS SELECT MaHD , NgayLapHD , MaKH
+FROM HoaDon
+WHERE YEAR(NgayLapHD) <=2023 AND MONTH(NgayLapHD) <=6;
+GO
+SELECT hd.MaHD , hd.MaKH , kh.TenKH ,kh.DiaChi ,hd.NgayLapHD
+FROM v_HDtrcThang6 hd join KhachHang kh ON hd.MaKH=kh.MaKH
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 5 : những đơn đặt hàng có hình thức tt là 2 và tên ncc của nó</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_DDHhinhThucTT2
+AS SELECT MaDDH , HinhThucTT ,MaNCC
+FROM DonDatHang
+WHERE HinhThucTT ='2';
+GO
+SELECT dh.MaDDH , dh.MaNCC , ncc.TenNCC,dh.HinhThucTT
+FROM v_DDHhinhThucTT2 dh join NhaCungCap ncc ON dh.MaNCC=ncc.MaNCC
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 6 : những khách hàng nợ tiền</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_khNoTien
+AS SELECT MaPTN,MaHD,NgayTra,SoTienTra
+FROM PhieuTraNo
+GO
+SELECT ptn.MaPTN,ptn.MaHD,hd.MaKH,kh.TenKH,kh.SoDT,ptn.NgayTra,ptn.SoTienTra
+FROM v_khNoTien ptn join HoaDon hd ON ptn.MaHD=hd.MaHD
+join KhachHang kh ON hd.MaKH=kh.MaKH
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 7: Danh sách các khách hàng đã mua sản phẩm và thông tin sản phẩm tương ứng</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_TonKho_SanPham AS
+SELECT SP.MaSP, SP.TenSP, SP.DonViTinh, SP.GiaBan, COALESCE(SUM(CTHD.SoLuongMua), 0) - COALESCE(SUM(PTN.SoTienTra), 0) AS TonKho
+FROM SanPham SP
+LEFT JOIN CT_HoaDon CTHD ON SP.MaSP = CTHD.MaSP
+LEFT JOIN PhieuTraNo PTN ON SP.MaSP = PTN.MaHD
+GROUP BY SP.MaSP, SP.TenSP, SP.DonViTinh, SP.GiaBan;
+GO
+SELECT *
+FROM v_TonKho_SanPham;
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 8 : Danh sách các sản phẩm được sản xuất trong nước:</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_SanPham_Noibo AS
+SELECT MaSP, TenSP, DonViTinh, GiaBan
+FROM SanPham
+WHERE MaSP IN (SELECT MaSP FROM CT_SanPham WHERE NuocSX = 'Việt Nam');
+GO
+SELECT *
+FROM v_SanPham_Noibo;
+DROP VIEW v_SanPham_Noibo;
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 9 : Danh sách các đơn đặt hàng và số lượng sản phẩm đã đặt hàng (theo tháng)</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_SanPham_Noibo AS
+SELECT MaSP, TenSP, DonViTinh, GiaBan
+FROM SanPham
+WHERE MaSP IN (SELECT MaSP FROM CT_SanPham WHERE NuocSX = 'Việt Nam');
+GO
+SELECT *
+FROM v_SanPham_Noibo;
+DROP VIEW v_SanPham_Noibo;
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Câu 10 : Danh sách khách hàng và số lượng hóa đơn đã mua:</td>
+                            <td>
+                                <pre>
+GO
+CREATE VIEW v_KhachHang_TongHoaDon AS
+SELECT KH.MaKH, KH.TenKH, KH.DiaChi, KH.SoDT, COUNT(HD.MaHD) AS TongHoaDon
+FROM KhachHang KH
+LEFT JOIN HoaDon HD ON KH.MaKH = HD.MaKH
+GROUP BY KH.MaKH, KH.TenKH, KH.DiaChi, KH.SoDT;
+GO
+SELECT *
+FROM v_KhachHang_TongHoaDon;
+                                </pre>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>

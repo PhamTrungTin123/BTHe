@@ -34,208 +34,263 @@
                             <th>Detail</th>
                         </tr>
                         <tr>
-                            <td>Tạo login
+                            <td>Tạo và xóa,thay đổi login
 
                             </td>
                             <td>
                                 <pre>
 
-Use [master]
+-Use [master]
 CREATE LOGIN Nhom7 with PASSWORD = '123456789'
+-DROP LOGIN Nhom7
+-Use [master]
+CREATE LOGIN Nhom7 with PASSWORD = '123456789'
+USE [QuanLyCuaHang]
+CREATE USER Nhom7 FOR LOGIN Nhom7
+USE [QuanLyCuaHang]
+ALTER LOGIN Nhom7 WITH NAME = Nhom7Moi;
+ALTER LOGIN Nhom7Moi WITH PASSWORD = '12345678910' MUST_CHANGE,
+CHECK_EXPIRATION = ON;
+DROP LOGIN Nhom7
                                 </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 2. Lấy danh sách đơn đặt hàng đã được thanh toán và chưa được thanh toán
+                            <td>Tạo user và xóa,thay đổi user
                             </td>
                             <td>
                                 <pre>
-GO
-CREATE FUNCTION dbo.GetPaidAndUnpaidOrders()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT MaDDH, HinhThucTT, CASE WHEN MaHD IS NOT NULL THEN 'Đã thanh toán' ELSE 'Chưa thanh toán' END AS TinhTrang
-FROM DonDatHang
-LEFT JOIN HoaDon ON DonDatHang.MaDDH = HoaDon.MaHD
-);
-GO
+-USE [QuanLyCuaHang]
+CREATE USER Nhom7 FOR LOGIN Nhom7
+-DROP USER IF EXISTS Nhom7
+-ALTER USER Nhom7 WITH NAME = Nhom7Moi;
+DROP USER IF EXISTS Nhom7
                                 </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 3. Lấy tổng doanh thu từ bán hàng của mỗi khách hàng</td>
+                            <td>Tạo role<br> gán quyền select cho quyền quản lý khách hàng trên bảng KhachHang</td>
                             <td>
                                 <pre>
-GO
-CREATE FUNCTION dbo.GetTotalRevenueByCustomer()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT KhachHang.MaKH, TenKH, SUM(GiaBan * SoLuongMua) AS DoanhThu
-FROM KhachHang
-JOIN HoaDon ON KhachHang.MaKH = HoaDon.MaKH
-JOIN CT_HoaDon ON HoaDon.MaHD = CT_HoaDon.MaHD
-JOIN SanPham ON CT_HoaDon.MaSP = SanPham.MaSP
-GROUP BY KhachHang.MaKH, TenKH
-);
-GO
-SELECT * FROM dbo.GetTotalRevenueByCustomer();
+CREATE ROLE QuanLyKhachHang;
+GRANT SELECT ON KhachHang TO QuanLyKhachHang;
+GRANT INSERT ON KhachHang TO QuanLyKhachHang;
                             </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 4. Lấy danh sách sản phẩm của một nhà cung cấp cụ thể
+                            <td>Thay đổi role
+                                <br>
+                                Thu hồi quyền SELECT cho quyền QuanLyKhachHang trên bảng KhachHang
+                                <br>
+                                Cấp lại quyền SELECT cho quyền QuanLyKhachHang trên bảng KhachHang
                             </td>
                             <td>
                                 <pre>
-GO
-CREATE FUNCTION dbo.GetProductsBySupplier(@MaNCC nvarchar(30))
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT SanPham.MaSP, TenSP, DonViTinh, GiaBan
-FROM SanPham
-JOIN CT_SanPham ON SanPham.MaSP = CT_SanPham.MaSP
-WHERE CT_SanPham.MaNCC = @MaNCC
-);
-GO
-SELECT * FROM dbo.GetProductsBySupplier('NCC001');
+-REVOKE SELECT ON KhachHang FROM QuanLyKhachHang;
+-GRANT SELECT,UPDATE ON KhachHang TO QuanLyKhachHang;
                                 </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 5. Lấy tổng số lượng sản phẩm đã bán theo từng tháng:
+                            <td>
+                                Xóa role<br>
+                                Thu hồi tất cả các quyền từ role QuanLySanPham trên bảng KhachHang
+                                <br>
+                                Xóa role QuanLySanPham
+                            </td>
+                            <td>
+                                <pre>
+-REVOKE ALL PRIVILEGES ON KhachHang FROM QuanLyKhachHang;
+-DROP ROLE QuanLyKhachHang;
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Gán quyền cho role
+                                <br>
+                                gán quyền để sử dụng toàn bộ tất cả các bảng
+                            </td>
+                            <td>
+                                <pre>
+USE [QuanLyCuaHang]
+CREATE ROLE Nhom7Role;
+USE [QuanLyCuaHang]
+DECLARE @TableName NVARCHAR(128)
+DECLARE table_cursor CURSOR FOR
+SELECT name
+FROM sys.tables
 
-                            </td>
-                            <td>
-                                <pre>
-GO
-CREATE FUNCTION dbo.GetTotalSoldProductsByMonth()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT MONTH(NgayLapHD) AS Thang, SUM(SoLuongMua) AS TongSoLuongBan
-FROM HoaDon
-JOIN CT_HoaDon ON HoaDon.MaHD = CT_HoaDon.MaHD
-GROUP BY MONTH(NgayLapHD)
-);
-GO
-SELECT * FROM dbo.GetTotalSoldProductsByMonth();
-                                </pre>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Câu 6 : danh sách khách hàng có số lượng đơn hàng nhiều nhất
-                            </td>
-                            <td>
-                                <pre>
-GO
-CREATE FUNCTION dbo.GetCustomersWithMostOrders()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT TOP 1 KH.*
-FROM KhachHang KH
-JOIN HoaDon HD ON KH.MaKH = HD.MaKH
-GROUP BY KH.MaKH, KH.TenKH, KH.DiaChi, KH.SoDT, KH.NgaySinh
-ORDER BY COUNT(HD.MaHD) DESC
-);
-GO
--- Sử dụng hàm
-SELECT * FROM dbo.GetCustomersWithMostOrders();
-                                </pre>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Câu 7: Tổng giá trị các đơn hàng của một nhà cung cấp</td>
-                            <td>
-                                <pre>
-GO
-CREATE FUNCTION dbo.GetTotalOrderValueBySupplier(@SupplierID NVARCHAR(30))
-RETURNS MONEY
-AS
+OPEN table_cursor
+FETCH NEXT FROM table_cursor INTO @TableName
+
+WHILE @@FETCH_STATUS = 0
 BEGIN
-DECLARE @TotalOrderValue MONEY;
-SELECT @TotalOrderValue = SUM(CTHD.SoLuongMua * CTHD.DonGiaBan)
-FROM HoaDon HD
-JOIN CT_HoaDon CTHD ON HD.MaHD = CTHD.MaHD
-JOIN CT_SanPham CTSP ON CTHD.MaSP = CTSP.MaSP
-WHERE CTSP.MaNCC = @SupplierID;
-RETURN @TotalOrderValue;
-END;
-GO
--- Sử dụng hàm
-DECLARE @SupplierID NVARCHAR(30) = 'NCC001';
-SELECT dbo.GetTotalOrderValueBySupplier(@SupplierID) AS TotalOrderValue;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[@TableName] TO Nhom7Role
+    FETCH NEXT FROM table_cursor INTO @TableName
+END
+
+CLOSE table_cursor
+DEALLOCATE table_cursor
+
                                 </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 8 .Danh sách sản phẩm có giá bán cao nhất</td>
                             <td>
-                                <pre>
-GO
-CREATE FUNCTION dbo.GetProductsHighestPrice()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT TOP 1 *
-FROM SanPham
-ORDER BY GiaBan DESC
-);
-GO
-                                </pre>
+                                Gán quyền cho user
+                                <br>
+                                TH1 : gán quyền để sử dụng 1 bảng nào đó : ở đây ví dụ là bảng SanPham
+                                <br>
+                                TH2 : gán quyền để sử dụng toàn bộ tất cả các bảng
                             </td>
-                        </tr>
-                        <tr>
-                            <td>Câu 9. Tổng số tiền phải trả của một khách hàng</td>
                             <td>
                                 <pre>
-GO
-CREATE FUNCTION dbo.GetTotalAmountToPayByCustomer(@CustomerID NVARCHAR(20))
-RETURNS MONEY
-AS
+TH1: USE [QuanLyCuaHang]
+GRANT SELECT, INSERT, UPDATE, DELETE ON SanPham TO Nhom7Moi
+
+TH2:USE [QuanLyCuaHang]
+
+DECLARE @TableName2 NVARCHAR(128)
+DECLARE table_cursor2 CURSOR FOR
+SELECT name
+FROM sys.tables
+
+OPEN table_cursor2
+FETCH NEXT FROM table_cursor2 INTO @TableName2
+
+WHILE @@FETCH_STATUS = 0
 BEGIN
-DECLARE @TotalAmount MONEY;
-SELECT @TotalAmount = SUM(PTN.SoTienTra)
-FROM PhieuTraNo PTN
-JOIN HoaDon HD ON PTN.MaHD = HD.MaHD
-WHERE HD.MaKH = @CustomerID;
-RETURN @TotalAmount;
-END;
-GO
--- Sử dụng hàm
-DECLARE @CustomerID NVARCHAR(20) = 'KH001';
-SELECT dbo.GetTotalAmountToPayByCustomer(@CustomerID) AS TotalAmountToPay;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[@TableName2] TO Nhom7Moi
+    FETCH NEXT FROM table_cursor2 INTO @TableName2
+END
+
+CLOSE table_cursor2
+DEALLOCATE table_cursor2
                                 </pre>
                             </td>
                         </tr>
                         <tr>
-                            <td>Câu 10: Danh sách sản phẩm được đặt hàng nhiều nhất</td>
+                            <td>
+                                Gán người dùng vào role
+                            </td>
                             <td>
                                 <pre>
-    GO
-CREATE FUNCTION dbo.GetMostOrderedProducts()
-RETURNS TABLE
-AS
-RETURN
-(
-SELECT TOP 1 SP.*, SUM(CTDDH.SLDat) AS TotalQuantityOrdered
-FROM SanPham SP
-JOIN CT_DDH CTDDH ON SP.MaSP = CTDDH.MaSP
-GROUP BY SP.MaSP, SP.TenSP, SP.DonViTinh, SP.GiaBan
-ORDER BY TotalQuantityOrdered DESC
-);
+USE [QuanLyCuaHang]
 GO
--- Sử dụng hàm
-SELECT * FROM dbo.GetMostOrderedProducts();
+
+IF EXISTS (SELECT * FROM sys.database_principals WHERE name = 'Nhom7Role')
+BEGIN
+ALTER ROLE Nhom7Role ADD MEMBER Nhom7Moi;
+END
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Thu hồi người dùng khỏi 1 role
+                            </td>
+                            <td>
+                                <pre>
+USE [QuanLyCuaHang]
+IF EXISTS (SELECT * FROM sys.database_principals WHERE name = 'Nhom7Moi')
+BEGIN
+ALTER ROLE Nhom7Role DROP MEMBER Nhom7Moi;
+END
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Thu hồi quyền trên user
+                                <br>
+                                TH1 : Thu hồi quyền để sử dụng 1 bảng nào đó : ở đây ví dụ là bảng SanPham
+                                <br>
+                                TH2 : Thu hồi tất cả các quyền từ user Nhom7Moi trên bảng SanPham
+                            </td>
+                            <td>
+                                <pre>
+TH1: USE [QuanLyCuaHang]
+IF EXISTS (SELECT * FROM sys.database_principals WHERE name = 'Nhom7Moi')
+BEGIN
+
+REVOKE SELECT, INSERT, UPDATE, DELETE ON dbo.SanPham TO Nhom7Moi;
+END
+
+TH2:USE [QuanLyCuaHang]
+GO
+
+DECLARE @TableName3 NVARCHAR(128)
+
+DECLARE table_cursor3 CURSOR FOR
+SELECT name
+FROM sys.tables
+
+OPEN table_cursor3
+
+FETCH NEXT FROM table_cursor3 INTO @TableName3
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF OBJECT_ID('[dbo].[@TableName3]') IS NOT NULL
+    BEGIN
+        REVOKE SELECT, INSERT, UPDATE, DELETE ON [dbo].[@TableName3] TO Nhom7Moi
+    END
+
+    FETCH NEXT FROM table_cursor3 INTO @TableName3
+END
+
+CLOSE table_cursor3
+DEALLOCATE table_cursor3
+
+GO
+                                </pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Thu hồi quyền trên role
+                                <br>
+                                TH1 : Thu hồi quyền để sử dụng 1 bảng nào đó : ở đây ví dụ là bảng SanPham
+                                <br>
+                                TH2 : Thu hồi quyền để sử dụng toàn bộ tất cả các bảng
+                            </td>
+                            <td>
+                                <pre>
+TH1: USE [QuanLyCuaHang]
+IF EXISTS (SELECT * FROM sys.database_principals WHERE name = 'Nhom7Role')
+BEGIN
+REVOKE SELECT, INSERT, UPDATE, DELETE ON SanPham FROM Nhom7Role;
+END
+
+TH2:USE [QuanLyCuaHang]
+GO
+
+DECLARE @TableName4 NVARCHAR(128)
+
+DECLARE table_cursor4 CURSOR FOR
+SELECT name
+FROM sys.tables
+
+OPEN table_cursor4
+
+FETCH NEXT FROM table_cursor4 INTO @TableName4
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF OBJECT_ID('[dbo].[@TableName3]') IS NOT NULL
+    BEGIN
+        REVOKE SELECT, INSERT, UPDATE, DELETE ON [dbo].[@TableName4] TO Nhom7Role
+    END
+
+    FETCH NEXT FROM table_cursor4 INTO @TableName4
+END
+
+CLOSE table_cursor4
+DEALLOCATE table_cursor4
+
+GO
                                 </pre>
                             </td>
                         </tr>
